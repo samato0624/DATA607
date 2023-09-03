@@ -1,0 +1,76 @@
+---
+title: "DATA 607 Week 1 Extra Credit"
+author: "Sean Amato"
+format: 
+  revealjs: 
+    chalkboard: true
+  html:
+    code-link: true
+editor: visual
+execute: 
+  echo: true
+---
+
+## Import Data & Packages
+
+For this exercise I will be using data from [this website](https://vincentarelbundock.github.io/Rdatasets/articles/data.html), the data set is for psychiatric patients hospitalized with depression.
+
+```{r}
+#| label: load data and packages
+#| message: false
+
+# I uploaded the data set to my github for convenience.
+depression <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/Ginzberg.csv")
+
+library(tidyverse)
+library(ggthemes)
+library(gt)
+```
+
+## Question
+
+To provide some background their are three columns of interest in the data set:
+
+-   simplicity - a measure of a patient's need to see the world in black and white
+
+-   fatalism - a measure of a patient's belief in determinism
+
+-   depression - a self reported rating of depression
+
+### My question is the following:
+
+Is there a correlation between simplicity/depression and fatalism/depression?
+
+## Data Table
+
+#### Here are the top four patients with the highest levels of self reported depression
+
+```{r}
+depression |>
+  arrange(desc(depression)) |>
+  slice_head(n = 4) |>
+  select(depression, simplicity, fatalism) |>
+  gt() |>
+  tab_style(style = list(cell_fill("lightcyan")), locations = cells_body(columns = depression)) |>
+  tab_header(title = md("**Table 1**"), subtitle = md("Top 4 patients with depression")) |>
+  cols_width(everything() ~ px(250))
+  
+```
+
+## Simplicity vs Depression
+
+Based on the chart below there seems to be a weak correlation between Simplicity & Depression.
+
+```{r}
+ggplot(data = depression, aes(x = simplicity, y = depression)) + 
+  geom_point()
+```
+
+## Fatalism vs Depression
+
+Based on the chart below there seems to be a very weak correlation between Fatalism & Depression.
+
+```{r}
+ggplot(data = depression, aes(x = fatalism, y = depression)) + 
+  geom_point()
+```
