@@ -1,0 +1,87 @@
+---
+title: "DATA 607 Week 1 Assignment"
+author: "Sean Amato"
+date: "2023-09-06"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The article that I'm presenting is titled **"What do men think it means to be a man?"**. The article is about a 35 question survey conducted in 2018 that was filled out by 1,615 adults who identified as men. The purpose of the survey was to answer the question **"What does it all mean for how men feel about being men?"** (<https://fivethirtyeight.com/features/what-do-men-think-it-means-to-be-a-man/>).
+  
+In my opinion their question is somewhat convoluted, so I'm just going to see if "real men don't cry", as my grandfather used to say.  
+
+## Import Data and Packages
+
+```{r}
+df <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/raw-responses.csv")
+library(DT)
+library(ggplot2)
+#NOTE: Here is the data for the survey questions, https://raw.githubusercontent.com/samato0624/DATA607/main/masculinity-survey.csv.
+```
+
+## Filter to certain columns
+The following questions represent the columns I'm filtering to, found in the next code chunk:  
+**Q1** In general, how masculine or "manly" do you feel?  
+**Q2** Do you think that society puts pressure on men in a way that is unhealthy or bad for them?  
+**Q3** Ask a friend for personal advice?  
+**Q4** Express physical affection to male friends, like hugging, rubbing shoulders?  
+**Q5** Cry?  
+**Q6** Get in a physical fight with another person?  
+**Q7** Have sexual relations with women, including anything from kissing to sex?  
+**Q8** Have sexual relations with men, including anything from kissing to sex?  
+**Q9** Watch sports of any kind?  
+**Q10** Work out?  
+**Q11** See a therapist?  
+**Q12** Feel lonely or isolated?  
+**Q13** Which of the following categories best describes your employment status?  
+Column 14 is the survey start time  
+Columns 15 is the survey end time  
+  
+```{r}
+manly_df <- data.frame(df$q0001, df$q0005, df$q0007_0002, df$q0007_0003, df$q0007_0004, df$q0007_0005, df$q0007_0006, df$q0007_0007, df$q0007_0008, df$q0007_0009, df$q0007_0010, df$q0007_0011, df$q0009, df$StartDate, df$EndDate)
+```
+
+## Rename Columns  
+**NOTE:** For the sake of column header space I will be renaming the columns based on the list presented above.
+```{r}
+column_names <- c("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "Q11", "Q12", "Q13", "Start_Time", "End_Time")
+
+colnames(manly_df) <- column_names
+```
+  
+## Make a Table  
+Here I'm using the dt package to make a table with filters, that show 5 entries along with the base options, and has a horizontal scroll bar.
+```{r}
+datatable(
+  data = manly_df,  
+  options = list(scrollX = TRUE, 
+                 autoWidth = TRUE, 
+                 pageLength = 5, 
+                 lengthMenu = c(5, 10, 25, 50)),
+  caption = "Manly Table",
+  filter = "top"
+)
+```
+
+## Findings and Recommendations  
+The article came out sometime after the #MeToo movement and presents charts that are more geared toward understanding how men feel about their employment/workplace environment. However, I hold the opinion that their title for the article is misleading and that they are really under utilizing the data they collected. I would further explore which columns are good predictors for a mans perception of their own masculinity. You could ask questions like "Is there a correlation between self rated masculinity and the duration at which the participant completed the survey?" or "Does working out or seeing a therapist affect ones self perception of masculinity?"
+  
+Now I'm going to try to answer whether or not "real men" cry.  
+**Answer:** Approximately 1,100(~70%) men, who feel at least "Somewhat masculine", cry rarely or more. So yes, there is evidence that "real men" cry.
+```{r}
+# Create a bar chart with counts for each answer in the cry question and trellis based on the answers from the masculine section.
+ggplot(manly_df, aes(x = Q5)) +
+  geom_bar(stat = "count", width = 0.7, fill = "steelblue") +
+  xlab("Q5: How often do you cry?") +
+  guides(x = guide_axis(angle = 90)) +
+  theme_minimal() +
+  facet_wrap(~Q1)
+```
+
