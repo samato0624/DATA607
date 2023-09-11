@@ -10,7 +10,6 @@ Procedures:
 1. Download the MySQL Community Server from https://dev.mysql.com/downloads/mysql/.
 
 2. Set up the server with the host as "localhost" and the username as "root".
-NOTE: On line 27 of the RMD file, password has been left blank for you to add when creating the SQL connection.
 
 3. Run HW2_DATA607_SA.sql within your workspace. It will create the database and add a table to it.
 
