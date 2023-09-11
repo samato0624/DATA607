@@ -18,7 +18,7 @@ library(dotenv)
 ```
 
 **Obtain database username and password**
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Retrieving the .env file.
 dotenv::load_dot_env()
 
