@@ -9,12 +9,22 @@ output: html_document
 This is an R Markdown document containing Sean Amato's work for the DATA 607 week 2 homework.  
   
 **Import packages**
-
 ```{r, message=FALSE, warning=FALSE}
 library(DBI)
 library(RMySQL)
 library(tidyverse)
 library(gt)
+library(dotenv)
+```
+
+**Obtain database username and password**
+```{r}
+# Retrieving the .env file.**
+dotenv::load_dot_env()
+
+# Access the environment variables.
+db_user <- Sys.getenv("DATABASE_USER")
+db_password <- Sys.getenv("DATABASE_PASSWORD")
 ```
 
 **Make a connection to my local SQL server**
@@ -22,9 +32,9 @@ library(gt)
 # Make a local connection to my database.
 movieratings <- dbConnect(RMySQL::MySQL(),
                 host = "localhost",
-                user = "root",
+                user = "db_user",
                 dbname = "data607",
-                password = "")
+                password = "db_password")
 ```
 
 
