@@ -1,6 +1,6 @@
 -- DATA 607 HW 2 Sean Amato
 
--- Clear the database if it exists
+-- Clear the database if it exists.
 DROP DATABASE IF EXISTS data607;
 
 -- Create and use the database that will interact with the coressponsing R Program.
