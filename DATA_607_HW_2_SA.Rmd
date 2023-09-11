@@ -1,0 +1,48 @@
+---
+title: "Data_607_Week2_HW_SA"
+author: "Sean Amato"
+date: "2023-09-10"
+output: html_document
+---
+## R Markdown
+
+This is an R Markdown document containing Sean Amato's work for the DATA 607 week 2 homework.  
+  
+**Import packages**
+
+```{r, message=FALSE, warning=FALSE}
+library(DBI)
+library(RMySQL)
+library(tidyverse)
+library(gt)
+```
+
+**Make a connection to my local SQL server**
+```{r}
+# Make a local connection to my database.
+movieratings <- dbConnect(RMySQL::MySQL(),
+                host = "localhost",
+                user = "root",
+                dbname = "data607",
+                password = "")
+```
+
+
+**Managing my data**
+```{r}
+
+# Query all my rows from my table "movieratings".
+query <- "SELECT * FROM movieratings"
+
+# Add my queried data to a data frame.
+df <- dbGetQuery(movieratings, query)
+
+# Display the data frame in a table.
+df |>
+  select(id, user, movie, rating) |>
+  gt() |>
+  tab_style(style = list(cell_fill("pink")), locations = cells_body(columns = user)) |>
+  tab_header(title = md("**Movie Ratings**"), subtitle = md("Friends and Family Movie Ratings")) |>
+  cols_width(everything() ~ px(150))
+```
+
