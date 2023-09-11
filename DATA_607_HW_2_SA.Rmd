@@ -19,7 +19,7 @@ library(dotenv)
 
 **Obtain database username and password**
 ```{r}
-# Retrieving the .env file.**
+# Retrieving the .env file.
 dotenv::load_dot_env()
 
 # Access the environment variables.
