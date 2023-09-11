@@ -9,10 +9,11 @@ Procedures:
 
 1. Download the MySQL Community Server from https://dev.mysql.com/downloads/mysql/.
 
-2. Set up the server with the host as "localhost" and the username as "root".
+2. Set up the server with the host as "localhost" and the username and password found in the .env file.
+NOTE: I know providing the .env file defeats the purpose of having one, but it demonstrates one way to provide credentials to a password protected server database.
+
+3. Place the Rmd, SQL, and .env file all in the same working directory.
 
 3. Run HW2_DATA607_SA.sql within your workspace. It will create the database and add a table to it.
 
-4. Within DATA_607_HW_2_SA.Rmd modify line 27 to include the password you used for setting up your local server.
-
-5. Run the RMD file by knitting to HMTL.
+4. Run the RMD file by knitting to HMTL.
