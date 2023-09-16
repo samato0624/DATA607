@@ -1,15 +1,15 @@
 -- DATA 607 HW 2 Sean Amato
 
--- Clear the database if it already exists.
-DROP DATABASE IF EXISTS data607;
+-- Clear the database if it exists
+DROP DATABASE IF EXISTS movieratings;
 
 -- Create and use the database that will interact with the coressponsing R Program.
-CREATE DATABASE data607;
-USE data607;
+CREATE DATABASE movieratings;
+USE movieratings;
 
 -- Add a table to the database.
 DROP TABLE IF EXISTS movieratings;
-CREATE TABLE `data607`.`movieratings` (
+CREATE TABLE `movieratings`.`movieratings` (
   `id` INT NOT NULL,
   `user` MEDIUMTEXT NOT NULL,
   `movie` MEDIUMTEXT NOT NULL,
