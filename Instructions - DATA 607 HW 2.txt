@@ -2,7 +2,7 @@ DATA 607 - HW 2 - Sean Amato
 
 
 Scope:
-This document is an aid for helping you to reproduce the steps I took to create a database and connect it to an Rmd file.
+This document is an aid for helping you to reproduce the steps I took to complete this assignment.
 
 
 Procedures:
