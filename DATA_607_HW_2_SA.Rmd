@@ -9,36 +9,38 @@ output: html_document
 This is an R Markdown document containing Sean Amato's work for the DATA 607 week 2 homework.  
   
 **Import packages**
+
 ```{r, message=FALSE, warning=FALSE}
 library(DBI)
 library(RMySQL)
 library(tidyverse)
 library(gt)
+library(httr)
 library(dotenv)
 ```
-
 **Obtain database username and password**
-```{r, message=FALSE, warning=FALSE}
-# Retrieving the .env file.
+```{r}
 dotenv::load_dot_env()
 
-# Access the environment variables.
+# Access the environment variables
 db_user <- Sys.getenv("DATABASE_USER")
 db_password <- Sys.getenv("DATABASE_PASSWORD")
 ```
 
-**Make a connection to my local SQL server**
+
+**Make a connection to my local SQL server**   
+Here I'm using a google cloud database.  
 ```{r}
-# Make a local connection to my database.
 movieratings <- dbConnect(RMySQL::MySQL(),
-                host = "localhost",
-                user = "db_user",
-                dbname = "data607",
-                password = "db_password")
+                host = "34.122.253.54",
+                user = db_user,
+                dbname = "movieratings",
+                password = db_password)
 ```
 
 
-**Managing my data**
+**Managing my data**  
+In terms of handling NULL values, I chose the gt library because it already does that for me.
 ```{r}
 
 # Query all my rows from my table "movieratings".
@@ -55,4 +57,3 @@ df |>
   tab_header(title = md("**Movie Ratings**"), subtitle = md("Friends and Family Movie Ratings")) |>
   cols_width(everything() ~ px(150))
 ```
-
