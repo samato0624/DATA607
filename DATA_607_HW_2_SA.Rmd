@@ -29,7 +29,7 @@ db_password <- Sys.getenv("DATABASE_PASSWORD")
 
 
 **Make a connection to my local SQL server**   
-Here I'm using a google cloud database.  
+Here I'm using a google cloud database, where I uploaded my manually collected survey data. 
 ```{r}
 movieratings <- dbConnect(RMySQL::MySQL(),
                 host = "34.122.253.54",
@@ -40,7 +40,7 @@ movieratings <- dbConnect(RMySQL::MySQL(),
 
 
 **Managing my data**  
-In terms of handling NULL values, I chose the gt library because it already does that for me.
+In terms of handling NULL values, I chose the gt library because it appropriately labels null values as NA in my table.
 ```{r}
 
 # Query all my rows from my table "movieratings".
