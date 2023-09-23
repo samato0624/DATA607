@@ -58,7 +58,7 @@ Describe in words what the following expressions will match:
 (.)\1\1 - This expression will find all triplets in a string for any character, i.e. "<aaa> a jja <kkk>l lkds".  
 "(.)(.)\\2\\1" - This expression will find any 4 character palindromes, i.e. "b a<baab>ab racecarara <k  k>l <....>".  
 (..)\1 - This expression will find any two consecutive sets of two characters, i.e. "b <abab>ab racec<arar>a kkkl lkds".  
-"(.).\\1.\\1" - This expression will find a 4 character string where positions 1, 3, & 4 are any of the same character and position 2 is any character, i.e. "b ab<a.aa>b race..carara< k  >kl <....>".  
+"(.).\\1.\\1" - This expression will find a 5 character string where positions 1, 3, & 5 are any of the same character and position 2 & 4 are any characters, i.e. "b ab<a.aba>b race..carara< k i >kl <...g.>".  
 "(.)(.)(.).*\\3\\2\\1" - This expression will find any 3 characters with any characters in between followed by the same 3 initial characters in reverse, i.e. "<abc cba .   I love taco tuesday!   kjn abc . cba> bleh!".
 
 **Exercise 4:** Construct regular expressions to match words that:  
