@@ -24,6 +24,7 @@ This is an R Markdown document containing Sean Amato's work pertaining to HW #3.
 df2 <- df[-146,]
 
 # Now I'm going to create a column and assign a row TRUE or FALSE based on whether it contains any of the following text in the 'Major' column: SCIENCE, OLOGY, COMPUTER, MATH, and ENGINEERING. While this probably isn't a perfect approach, in my opinion it's a very good first pass. I know "Physics" is one major my classifier misses as you can collect data during experiments and run statistical analysis to ensure your data is sound.
+
 df2$Data_or_Stats <- str_detect(df2$Major, "SCIENCE")|str_detect(df2$Major, "OLOGY")|str_detect(df2$Major, "COMPUTER")|str_detect(df2$Major, "MATH")|str_detect(df2$Major, "ENGINEERING")|str_detect(df2$Major, "TECHNO")
 
 # Printing the top 10 rows to show the results
@@ -36,18 +37,18 @@ head(df2, 10) |>
 
 **Exercise 2:**
 ```{r}
-# For this problem I copy and pasted the data directly from the homework and put it into "string1", via single quotes, without formatting it.
+# For this problem I copy and pasted the data directly from the homework and put it into "string1", via single quotes, without any formatting.
 string1 <- '[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
 [5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
 [9] "elderberry"   "lime"         "lychee"       "mulberry"    
 [13] "olive"        "salal berry"'
 
-# In the following lines I'm removing things that I don't want in my string.
+# In the following lines I've removed numbers and square brackets from my string.
 string2 <- str_remove_all(string1, "[0-9]")
 string3 <- str_remove_all(string2, "\\[\\]")
 
-# Here I'm extracting my items in quotations and storing them
-matches <- str_extract_all(string3, '"([^"]+)"') # This is the most important thing I learned from this exercise.
+# Here I've extracted items in quotations and stored them in matches.
+matches <- str_extract_all(string3, '"([^"]+)"') # The regex here does all the heavy lifting.
 x <- unlist(matches)
 x2 <- str_remove_all(x, "\"")
 print(x2)
@@ -57,7 +58,7 @@ print(x2)
 Describe in words what the following expressions will match:
 (.)\1\1 - This expression will find all triplets in a string for any character, i.e. "<aaa> a jja <kkk>l lkds".  
 "(.)(.)\\2\\1" - This expression will find any 4 character palindromes, i.e. "b a<baab>ab racecarara <k  k>l <....>".  
-(..)\1 - This expression will find any two consecutive sets of two characters, i.e. "b <abab>ab racec<arar>a kkkl lkds".  
+(..)\1 - This expression will find any two consecutive character pairs, i.e. "b <abab>ab racec<arar>a kkkl lkds".  
 "(.).\\1.\\1" - This expression will find a 5 character string where positions 1, 3, & 5 are any of the same character and position 2 & 4 are any characters, i.e. "b ab<a.aba>b race..carara< k i >kl <...g.>".  
 "(.)(.)(.).*\\3\\2\\1" - This expression will find any 3 characters with any characters in between followed by the same 3 initial characters in reverse, i.e. "<abc cba .   I love taco tuesday!   kjn abc . cba> bleh!".
 
