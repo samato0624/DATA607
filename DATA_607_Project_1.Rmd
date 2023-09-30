@@ -1,0 +1,90 @@
+---
+title: "607_Project_1_SA"
+author: "Sean Amato"
+date: "2023-09-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+file_str <- paste(readLines("https://raw.githubusercontent.com/samato0624/DATA607/main/DATA_607_Project_1.txt"), collapse = "\n")
+```
+
+## R Markdown
+
+This is an R Markdown document for Sean's first DATA 607 Project where the intent is to extract data on chess matches from a cross table and produce a CSV file that captures the players name, state, total score, pre-rating, and the average of their opponents pre-ratings.
+
+```{r}
+# First I want to remove any arrows as the dash in "->" is going to mess us up later.
+file_str_2 <- str_replace_all(file_str, "->", "|")
+
+# Here we're using gsub to remove any dashes surrounded by letters.
+file_str_3 <- gsub("(?<=[A-Z])-(?=[A-Z])", " ", file_str_2, perl = TRUE)
+
+# Extract any text that isn't a dash and make it a list.
+extraction <- str_extract_all(file_str_3, '([^-]+)')
+rows <- unlist(extraction)
+
+# Clean up the list items for further processing.
+rows_2 <- str_replace_all(rows, "/", "|")
+rows_3 <- str_remove_all(rows_2, "\n")
+
+# Shorten each row to remove unnecessary data.
+rows_4 <- sub("^([^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\|).*$", "\\1", rows_3)
+
+# Break up each string by a delimiter to create a list of lists
+rows_5 <- str_split(rows_4, "\\|")
+
+#convert a list of lists by row into a data frame.
+df <- as.data.frame(do.call(rbind, rows_5))
+
+# Change the order of the columns. 
+df2 <- df[,c("V1", "V2", "V11", "V3", "V13", "V4", "V5", "V6", "V7", "V8", "V9", "V10")]
+
+# Rename and reorder all the columns.
+colnames(df2) <- c("Pair", "Player Name", "State", "Point Total", "Pre-rating", "Round 1", "Round 2", "Round 3", "Round 4", "Round 5", "Round 6", "Round 7")
+
+# Removing the first row as it doesn't contain player data and removing any characters that are not numbers in the Pre-rating and Round [#] columns.
+df3 <- df2[-1,]
+df3$`Pre-rating` <- as.numeric(str_extract(df3$`Pre-rating`, "\\d+"))
+df3$`Round 1` <- as.integer(str_remove_all(df3$`Round 1`, "[^0-9]"))
+df3$`Round 2` <- as.integer(str_remove_all(df3$`Round 2`, "[^0-9]"))
+df3$`Round 3` <- as.integer(str_remove_all(df3$`Round 3`, "[^0-9]"))
+df3$`Round 4` <- as.integer(str_remove_all(df3$`Round 4`, "[^0-9]"))
+df3$`Round 5` <- as.integer(str_remove_all(df3$`Round 5`, "[^0-9]"))
+df3$`Round 6` <- as.integer(str_remove_all(df3$`Round 6`, "[^0-9]"))
+df3$`Round 7` <- as.integer(str_remove_all(df3$`Round 7`, "[^0-9]"))
+
+# Replacing the index number for each opponent with their corresponding score for mean calculations.
+df3$`Point Total`<- as.numeric(df3$`Point Total`)
+df3$`Round 1` <- as.numeric(df3$`Pre-rating`[df3$`Round 1`])
+df3$`Round 2` <- as.numeric(df3$`Pre-rating`[df3$`Round 2`])
+df3$`Round 3` <- as.numeric(df3$`Pre-rating`[df3$`Round 3`])
+df3$`Round 4` <- as.numeric(df3$`Pre-rating`[df3$`Round 4`])
+df3$`Round 5` <- as.numeric(df3$`Pre-rating`[df3$`Round 5`])
+df3$`Round 6` <- as.numeric(df3$`Pre-rating`[df3$`Round 6`])
+df3$`Round 7` <- as.numeric(df3$`Pre-rating`[df3$`Round 7`])
+
+# Finally we calculate the mean the average pre-rating of the opponents they faced.
+for (i in 1:nrow(df3)){
+  x <- c(df3$`Round 1`[i], df3$`Round 2`[i], df3$`Round 3`[i], df3$`Round 4`[i], df3$`Round 5`[i], df3$`Round 6`[i], df3$`Round 7`[i])
+  df3$`Average Opponent Rating`[i] <- mean(na.exclude(x))
+}
+
+# Final steps are formatting and removing columns, then putting the df into a .csv format.
+df3$`Average Opponent Rating` <- as.integer(df3$`Average Opponent Rating`)
+
+df4 <- df3[,c(-1, -6, -7, -8, -9, -10, -11, -12)]
+df4$`Player Name` <- gsub("^\\s+|\\s+$", "", df4$`Player Name`)
+df4$State <- trimws(df4$State)
+
+df5 <- data.frame(df4, row.names = NULL)
+
+print(df5)
+
+# The CSV file should appear in your working directory.
+write.csv(df5, file = "chess_data.csv", row.names = FALSE)
+```
