@@ -1,0 +1,124 @@
+---
+title: "607_HW_5_SA"
+author: "Sean Amato"
+date: "2023-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## R Markdown
+
+This is an R Markdown document with Sean Amato's work for the week 5 homework relating to tidying a dataset.  
+
+* * *  
+
+First, I started by importing practically an exact replica of the data from blackboard.
+```{r}
+messy_df <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/HW_Week_5_SA_Table.csv")
+```
+
+Here I'm printing the data to inspect it and do some initial cleaning.  
+```{r}
+print(messy_df)
+
+# Removing the blank row.
+messy_df2 <- messy_df %>% 
+  filter(Seattle != "[0-9]")
+
+# Adding missing values to the first column.
+messy_df2[2,1] <- "ALASKA"
+messy_df2[4,1] <- "AM WEST"
+
+# Cleaning up the column names.
+colnames(messy_df2) <- c("Airline", "Status", "Los Angeles", "Phoenix", "San Diego", "San Francisco", "Seattle")
+
+print(messy_df2)
+```
+  
+Now that some basic transformations have been completed, the next step is to switch from a wide to a long format. Below you can observe that the original table has been atomized as far as possible, with each row representing a single flight.
+```{r, warning=FALSE}
+clean_df <- pivot_longer(
+  messy_df2, 
+  cols = "Los Angeles":"Phoenix":"San Diego":"San Francisco":"Seattle", 
+  names_to = "Destination", 
+  values_to = "Flights"
+) %>% uncount(Flights)
+
+head(clean_df,10)
+```
+Now let's perform an some exploratory data analysis to see if we can find any meaningful differences between the 2 airlines.  
+
+Based on the chart presented below, by counts alone we can tell that AM WEST has more overall arrival delays, but this doesn't help us infer anything about the delays in different destinations.
+```{r}
+arrival_delays <- clean_df %>%
+  filter(Status == "delayed")
+
+ggplot(arrival_delays, aes(x = Airline)) + geom_bar(stat = "count", fill = "purple") + 
+  theme_classic()
+```
+
+When we aggregate the delayed flights by city we find that AM WEST struggles to get people to Phoeniz on-time, while ALASKA struggles to get people to Seattle on-time. The rest of the destinations have marginal differences in comparison to Phoenix and Seattle, but this chart doesn't help us understand anything about the total throughput that each airline is responsible for. Thus, these charts do not provide a fair comparison.
+```{r}
+ggplot(arrival_delays, aes(x = Airline)) + geom_bar(stat = "count", fill = "steelblue") + 
+  facet_wrap(~Destination) +
+  theme_classic()
+```
+
+Here I'm going to take clean_df and convert it back to a wider format for an evaluation of delay proportions.  
+
+**Step 1.** Separate the data by Status to create 2 different tables. Additionally, I concatenated the destination with the airline to create a key, with which I'm able to use later to rejoin the two tables.
+```{r}
+clean_df_delayed <- clean_df %>%
+  filter(Status == "delayed") %>%
+  count(Airline, Status, Destination) %>%
+  mutate(Airline_Dest = paste(Airline, Destination))
+
+clean_df_on_time <- clean_df %>%
+  filter(Status == "on time") %>%
+  count(Airline, Status, Destination) %>%
+  mutate(Airline_Dest = paste(Airline, Destination)) %>%
+  select(c(2,4,5))
+```
+**Step 2.** Join the data back together by the key (Airline_Dest) I made earlier.
+```{r}
+clean_df2 <- left_join(clean_df_delayed, clean_df_on_time, by = "Airline_Dest")
+
+print(clean_df2)
+```
+**Step 3.** Change column names for house keeping purposes and remove redundant data such as the status columns and the key.  
+**Step 4.** Calculate proportions of delayed flights and plot them to understand what the airlines track records look like in terms of getting people to their destinations on time.
+```{r}
+colnames(clean_df2) <- c("Airline", "Status_delayed", "Destination", "Delay_Count", "Airline_Dest", "Status_on_time", "On_Time_Count")
+
+clean_df3 <- clean_df2 %>%
+  select(c(1,3,4,7)) %>%
+  mutate(Total = Delay_Count + On_Time_Count) %>%
+  mutate(Delay_Proportion = Delay_Count/Total)
+
+print(clean_df3)
+
+ggplot(clean_df3, aes(x = Airline, y = Delay_Proportion)) + 
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  facet_wrap(~Destination) +
+  theme_classic()
+```
+
+**Conclusions:** If I was to bet on one airline over another to get me to my destination on time I would go with Alaska. The proportion of flight delays through Alaska by destination is lower than AM WEST across the board and the count of delayed flights via AM WEST is ~37% greater than Alaska.  
+
+There is a caveat to this though, below I totaled the number of flights that each airline completes and for ALASKA vs AM WEST it's 3,775 & 7,225 respectively. Based on supply and demand, if I'm looking to get a cheaper flight I would wager that AM WEST would save me money in exchange for a less reliable service. However I can't confirm my claim since AM WEST stopped operating back in 2007.
+```{r}
+Alaska <- clean_df3 %>%
+  filter(Airline == "ALASKA")
+sum(Alaska$Total)
+
+AM_West <- clean_df3 %>%
+  filter(Airline == "AM WEST")
+sum(AM_West$Total)
+```
+
