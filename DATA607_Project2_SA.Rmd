@@ -1,0 +1,161 @@
+---
+title: "DATA 607 Project 2"
+author: "Sean Amato"
+date: "2023-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(DT)
+library(ggimage)
+library(grid)
+```
+
+## R Markdown
+
+This is an R Markdown document with Sean Amato's work for the project 2. In this project I will be examining 3 data sets and try to answer three different questions.
+
+1. For the baseball data set, I want to create a table with the total number of home runs for each team year over year.
+2. For the weather data set, I want to visualize the wind patterns across islands in the pacific, for the month of September.
+3. For the emergency services data set, I want to create a bar chart with the proportion of patients admitted at different levels of severity.  
+* * *  
+
+First, I started by importing all the data and a map image (for #2) housed in my github repository.
+```{r}
+baseball_df <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/Project2_Baseball.csv") # Analyze home runs over time aggregated by team.
+weather_df <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/Project2_Weather.csv") # Analyze weather patterns.
+ems_df <- read.csv("https://raw.githubusercontent.com/samato0624/DATA607/main/Project2_Weewoo.csv") # Compare EMS admission cases by severity.
+
+map_url <- "https://github.com/samato0624/DATA607/blob/main/Pacific_Islands.png?raw=true"
+```
+
+**1. Baseball** 
+
+Step 1.1 First let's clean up the home run data set.  
+```{r}
+# Ensure all blanks in the team column are filled in using a for loop.
+x <- nrow(baseball_df)
+for (i in 1:x) {
+  if(baseball_df$Team[i] == ""){
+    baseball_df$Team[i] <- baseball_df$Team[i -1]
+  }
+}
+
+# Clean up column names.
+colnames(baseball_df) <- c("Team", "Position", "HR_2018", "HR_2019", "HR_2021", "HR_2022", "HR_2023")
+
+# Remove position column, sum up the home runs across each team, and change the year column to just the integers.
+baseball_df2 <- baseball_df %>%
+  select(c(1,3,4,5,6,7)) %>%
+  group_by(Team) %>%
+  summarise(`2018` = sum(HR_2018, na.rm = TRUE),
+            `2019` = sum(HR_2019, na.rm = TRUE),
+            `2021` = sum(HR_2021, na.rm = TRUE),
+            `2022` = sum(HR_2022, na.rm = TRUE),
+            `2023` = sum(HR_2023, na.rm = TRUE))
+
+# Replace team acronyms with actual team names.
+teams <- c("Baltimore Orioles", "Boston Red Sox", "New York Yankees", "Tampa Bay Rays", "Toronto Blue Jays")
+y <- nrow(baseball_df2)
+
+for(j in 1:y){
+  baseball_df2$Team[j] <- teams[j]
+}
+
+
+```
+
+Step 1.2 Create the data table.
+```{r}
+datatable(
+  data = baseball_df2,  
+  options = list(scrollX = TRUE, 
+                 autoWidth = FALSE, 
+                 pageLength = 5),
+  caption = "Total homeruns for 5 MLB teams by year"
+)
+```
+Conclusions: I don't see any notable trends among the MLB teams, but we have no HRs for 2020 due to C-19.
+
+**2. Weather**
+
+Step 2.1 First let's clean up the weather dataset. 
+```{r}
+#Need country, location, latitude, longitude, timezone, last_updated, temp_f, wind_mph, and wind_degree columns.
+weather_df <- weather_df[c("country", "location_name", "latitude", "longitude", "timezone", "last_updated", "wind_mph", "wind_degree")]
+
+weather_df2 <- weather_df %>%
+  filter(str_detect(timezone, "Pacific")) %>% # Filter to a subset of islands in the  Pacific Timezone.
+  filter(str_detect(last_updated, "^9")) %>% 
+  filter(longitude>0) %>% 
+  filter(latitude>-30) %>% 
+  mutate(wind_radian = wind_degree * pi/180) %>%
+  mutate(latitude_end = wind_mph*sin(wind_radian)/2 + latitude) %>% # Calculating ending positions for wind vectors.
+  mutate(longitude_end = wind_mph*cos(wind_radian)/2 + longitude)
+
+weather_df2 <- weather_df2[c("country", "latitude", "longitude", "wind_mph", "latitude_end", "longitude_end")] # Removing unnecessary columns.
+
+
+```
+
+Step 2.2 Plot the data as vectors on a map of the islands in the pacific.
+```{r}
+g <- ggplot(weather_df2, aes(x = longitude, y = latitude)) +
+  geom_segment(aes(xend = longitude_end, yend = latitude_end, color = wind_mph), 
+               arrow = arrow(length = unit(0.5, "cm")),
+               size = 0.85) + # Create vectors on the chart.
+  geom_text(aes(label = country), vjust = -2.5) +
+  scale_color_gradient(low = "blue", high = "red", name = "wind_mph") +
+  theme(legend.position = "none")
+
+ggbackground(g, map_url) # Place my map as a background image in my plot.
+```
+Conclusions: Via observation alone the Solomon Islands and Micronesia seem to be less windy than all the other countries.
+  
+**3. Emergency Services**
+
+Step 3.1 First let's clean up the emergency services data set. 
+```{r}
+ems_df2 <- ems_df %>%
+  select(34:43) %>% # Select the appropriate columns and sum the rows.
+  summarise(`Non Urgent1` = sum(EMS_VISITS_NON_URGENT_NOT_adm, na.rm = TRUE),
+            `Non Urgent admitted` = sum(EMS_VISITS_NON_URGENT_adm, na.rm = TRUE),
+            `Urgent1` = sum(EMS_VISITS_URGENT_NOT_adm, na.rm = TRUE),
+            `Urgent admitted` = sum(EMS_VISITS_URGENT_adm, na.rm = TRUE),
+            `Moderate1` = sum(EMS_VISITS_MODERATE_NOT_adm, na.rm = TRUE),
+            `Moderate admitted` = sum(EMS_VISITS_MODERATE_adm, na.rm = TRUE),
+            `Severe1` = sum(EMS_VISITS_SEVERE_NOT_adm, na.rm = TRUE),
+            `Severe admitted` = sum(EMS_VISITS_SEVERE_adm, na.rm = TRUE),
+            `Critical1` = sum(EMS_VISITS_CRITICAL_NOT_adm, na.rm = TRUE),
+            `Critical admitted` = sum(EMS_VISITS_CRITICAL_adm, na.rm = TRUE)) %>%
+  mutate(`Non Urgent` = `Non Urgent admitted`/(`Non Urgent admitted`+`Non Urgent1`)) %>% # Calculate the proportion of hospital admission rates by severity.
+  mutate(`Urgent` = `Urgent admitted`/(`Urgent admitted`+`Urgent1`)) %>%
+  mutate(`Moderate` = `Moderate admitted`/(`Moderate admitted`+`Moderate1`)) %>%
+  mutate(`Severe` = `Severe admitted`/(`Severe admitted`+`Severe1`)) %>%
+  mutate(`Critical` = `Critical admitted`/(`Critical admitted`+`Critical1`)) %>%
+  select(c(11:15)) # Select the appropriate columns.
+
+ems_df3 <- pivot_longer(
+  ems_df2, 
+  cols = "Non Urgent":"Urgent":"Moderate":"Severe":"Critical", 
+  names_to = "Severity Status", 
+  values_to = "Admission Rate"
+)
+
+print(ems_df3)
+``` 
+Step 3.2 Now let's plot the proportion of hospital admission rates by severity.
+```{r}
+custom_order <- c("Non Urgent", "Urgent", "Moderate", "Severe", "Critical")
+ems_df3$`Severity Status` <- factor(ems_df3$`Severity Status`, levels = custom_order)
+
+
+ggplot(ems_df3, aes(x = `Severity Status`, y = `Admission Rate`)) + 
+  geom_bar(stat = "identity", fill = "darkgreen")
+```
+Conclusions: The worse the severity the higher the admission rate.
