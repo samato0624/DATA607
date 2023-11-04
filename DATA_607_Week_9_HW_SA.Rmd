@@ -1,0 +1,44 @@
+---
+title: "DATA_607_Week_9_HW_SA"
+author: "Sean Amato"
+date: "2023-11-03"
+output: html_document
+---
+
+```{r, warning = FALSE, message=FALSE}
+library(httr2)
+library(DT)
+library(jsonlite)
+library(dplyr)
+```
+
+## R Markdown
+
+This is an R Markdown document for Sean Amato's Week 9 homework. In this file I'm acquiring information on NY Times best selling mangas.
+
+```{r}
+# A request is sent to the API and the mangas are captured in a list of lists.
+df <- request("https://api.nytimes.com/svc/books/v3//lists/current/manga.json?api-key=tuDsoGCqUWBAm7z3obdIO46PGoUGECBx") %>%
+  req_perform() %>%
+  resp_body_string() %>%
+  fromJSON()
+
+# The list of lists is converted to a data frame in order to extract the nested list.
+df2 <- as.data.frame(do.call(rbind, df))
+nested_df <- df2[5, 11]
+
+# The nested list is converted to a data frame in order to filter to the columns of interest.
+df3 <- as.data.frame(do.call(rbind, nested_df)) %>%
+  select(c(1, 11, 12, 9, 8))
+
+# The data frame is displayed as a table.
+datatable(
+  data = df3,  
+  options = list(scrollX = TRUE, 
+                 autoWidth = FALSE, 
+                 pageLength = 10),
+  caption = "NY Times Best Selling Mangas"
+)
+```
+
+
