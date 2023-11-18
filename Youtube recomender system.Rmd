@@ -9,10 +9,13 @@ output: html_document
 
 Your task is to analyze an existing recommender system that you find interesting.  You should:
 
-1. Perform a Scenario Design analysis as described below.  Consider whether it makes sense for your selected recommender system to perform scenario design twice, once for the organization (e.g. Amazon.com) and once for the organization's customers.
-2. Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find on the Internet or elsewhere.
+1. Perform a Scenario Design analysis as described below.  Consider whether it makes sense for your selected recommender system to 
+perform scenario design twice, once for the organization (e.g. Amazon.com) and once for the organization's customers.
+2. Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find 
+on the Internet or elsewhere.
 3. Include specific recommendations about how to improve the site's recommendation capabilities going forward. 
-4. Create your report using an R Markdown file, and create a discussion thread with a link to the GitHub repo where your Markdown file notebook resides.  You are not expected to need to write code for this discussion assignment.
+4. Create your report using an R Markdown file, and create a discussion thread with a link to the GitHub repo where your Markdown 
+file notebook resides.  You are not expected to need to write code for this discussion assignment.
 
 ## Platform
 For my assignment I will be looking at the Youtube recommendation system.
@@ -20,15 +23,23 @@ For my assignment I will be looking at the Youtube recommendation system.
 ## 1. Scenario Design Analysis
 When we think about Youtube there exist two types of users, viewers and creators.
 
-*Viewers:* The reason for a viewer to watch a video is to ultimately be entertained. Regardless of the genre the content presents, viewers are looking for content that grabs their attention. Youtube achieves the users need for entertainment by making the platform freely accessible to the lay user, paid subscriptions, and so many videos you couldn't watch all the content over thousands of lifetimes.
+*Viewers:* The reason for a viewer to watch a video is to ultimately be entertained. Regardless of the genre the content presents, 
+viewers are looking for content that grabs their attention. Youtube achieves the users need for entertainment by making the platform 
+freely accessible to the lay user, paid subscriptions, and so many videos you couldn't watch all the content over thousands of lifetimes.
 
-*Creators:* The motivation for most creators on youtube is to monetize their channel. Youtube pays creators based on the number of views, subscriptions, and ads run on their videos and can become a full time job for some people based on the traffic Youtubers bring to the site.
+*Creators:* The motivation for most creators on youtube is to monetize their channel. Youtube pays creators based on the number of views, 
+subscriptions, and ads run on their videos and can become a full time job for some people based on the traffic Youtubers bring to the site.
 
 ## 2. Reverse Engineering the site
-Youtube actually provides information on how the browser algorithm works. Thumbnails are one of the most important tools for grabbing the attention of a user, a 10% click-through rate indicates you have a popular video. Many popular videos hold your attention on average 3 min 40 sec. The algorithm takes into account whether or not you are watching popular or unique topics and whether or not someone is happy with your content after watching the video.
+Youtube actually provides information on how the browser algorithm works. Thumbnails are one of the most important tools for grabbing 
+the attention of a user, a 10% click-through rate indicates you have a popular video. Many popular videos hold your attention on average 
+3 min 40 sec. The algorithm takes into account whether or not you are watching popular or unique topics and whether or not someone is 
+happy with your content after watching the video.
 
 ## 3. Improving recomendations
-Providing users greater control over there preferences may be useful. As of now I don't know how to reset my preferences in Youtube just through the UI. The algorithm also has a tendency to overfill my feed with clickbait related to one video I watched, that was not the norm for my preferences. More formally I would say:  
+Providing users greater control over there preferences may be useful. As of now I don't know how to reset my preferences in Youtube just 
+through the UI. The algorithm also has a tendency to overfill my feed with clickbait related to one video I watched, that was not the norm 
+for my preferences. More formally I would say:  
 
 1. Make the recommendation algorithm tuning parameters present in the UI
 2. Mitigate Click Bait Videos
