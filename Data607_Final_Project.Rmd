@@ -1,0 +1,272 @@
+---
+title: "DATA607_Final_Project"
+author: "Sean Amato"
+date: "2023-11-30"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+**Initial Research Quesiton:**
+Can I predict a games market performance based on it’s genre and how would it compare to other titles (Indie or AAA) in the same genre?
+
+**Loading Libraries:**
+```{r}
+# Check if the package is already installed
+if (!requireNamespace("steamR", quietly = TRUE)) {
+  if (!requireNamespace("remotes", quietly = TRUE)) {
+    install.packages("remotes")
+  }
+  
+  remotes::install_github("drewlake/steamR")
+} else {
+  cat("The 'steamR' package is already installed.\n")
+}
+```
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(caret)
+library(pROC)
+```
+
+**Section 1: Acquiring Data**
+```{r}
+# Data from steam about overall game rating and genres/tags.
+game_data <- read.csv(
+  "https://raw.githubusercontent.com/samato0624/DATA607/main/merged_data.csv"
+)
+
+# My friend list from Steam.
+#NOTE: The data pulled from these accounts may not be perfectly representative of all the games on the steam platform, but each individual (excluding luvb3ar which is my account) on this list are people I've known in person anywhere from 6 to 25 years. I know a lot about their preferences as individuals and can say we all have played a lot of good games and have pretty diverse libraries with some overlap.
+steamIDs <- c("76561198056383273", #luvb3ar
+              "76561197995559103", #AntiHeart
+              "76561198012801914", #ChefQ
+              "76561198010606043", #Glide
+              "76561198010490213", #Booty Cheeks
+              "76561198052348365", #FlashTrick
+              "76561198397785060", #SnowFire087
+              "76561198285941820", #Donovahkiin
+              "76561198083997213", #DorsidhionGrey
+              "76561198413524472", #kreneemill
+              "76561198052405512", #Luna
+              "76561198041847080", #Snorto
+              "76561198149410376" #The Guilded Marm
+              )
+
+# Creating an empty data frame to add data pulled from friend accounts.
+player_data <- data.frame()
+
+# Columns of interest from player data.
+columns_to_keep <- c("appid", "name", "playtime_forever")
+
+# The following for loop does The following for loop....
+# 1. Grab player data using and R package in tandum with an API key.
+# 2. Filter columns.
+# 3. Remove duplicates.
+# 4. Add steam IDs.
+# 5. Append the player data to the player_data data frame.
+# 6. Repeat until all player data has been extracted.
+for (i in 1:length(steamIDs)) {
+  temp <- as.data.frame(SteamR::games("247135F997365F298A0E52ADA7090847", steamIDs[i]))
+  temp <- subset(temp, select = columns_to_keep) %>%
+    distinct() %>%
+    mutate(player_id = steamIDs[i])
+  player_data <- rbind(player_data, temp)
+}
+
+colnames(player_data)[colnames(player_data) == "name"] <- "Title"
+
+glimpse(game_data)
+
+
+
+
+# At this point we have acquired two data sets. The first is platform data downloaded from Kaggle and the second is a sample of player data collected from a Steam API.
+```
+
+**Section 2: Sculpting Data**
+```{r}
+# Extracting percent positive review, total reviews, and original price from string.
+game_data <- game_data %>%
+  mutate(`Percent_Positive` = str_extract(`All.Reviews.Number`, "\\d+%")) %>%
+  drop_na(`Percent_Positive`) %>%
+  mutate(`Percent_Positive` = as.numeric(str_remove(`Percent_Positive`, "%"))) %>%
+  mutate(`Total_Reviews` = str_extract(`All.Reviews.Number`, "the (.*?) user")) %>%
+  mutate(`Total_Reviews` = as.numeric(str_remove_all(`Total_Reviews`, "[^0-9]"))) %>%
+  mutate(`Positive_Reviews` = as.numeric(`Total_Reviews` * `Percent_Positive` * 0.01)) %>%
+  mutate(`Original_Price` = as.numeric(str_remove_all(`Original.Price`, "[^0-9]")) * 0.01)
+
+# Making any price that is NA to zero, because it listed as free if it had a review.
+game_data$Original_Price[is.na(game_data$Original_Price)] <- 0
+
+# Creating a subset of our game data.
+columns_to_keep_2 <- c("Title", "All.Reviews.Summary", "Popular.Tags", "Game.Features", "Percent_Positive", "Total_Reviews", "Positive_Reviews", "Original_Price")
+game_data_2 <- subset(game_data, select = columns_to_keep_2)
+
+# Merging our player data with our game data
+merged_data <- left_join(player_data, game_data_2, by = "Title")
+merged_data$Original_Price[is.na(merged_data$Original_Price)] <- 0
+
+columns_to_keep_3 <- c("Title", "playtime_forever", "All.Reviews.Summary", "Popular.Tags", "Game.Features", "Percent_Positive", "Total_Reviews", "Original_Price")
+
+# Refining our merged data to summarize average play times of the players across each game and removing games without reviews.
+merged_data_2 <- subset(merged_data, select = columns_to_keep_3) %>%
+  group_by(Title) %>%
+  summarise(average_play_time_min = as.integer(mean(playtime_forever)),
+            Title = first(Title),
+            All_Reviews_Summary = first(All.Reviews.Summary),
+            Popular_Tags = first(Popular.Tags),
+            Percent_Positive = first(Percent_Positive),
+            Total_Reviews = first(Total_Reviews),
+            Original_Price = first(Original_Price),
+            .groups = 'drop'  # This prevents the tibble grouping behavior
+           ) %>%
+  drop_na(`All_Reviews_Summary`) %>%
+  mutate(Binary_All_Reviews_Summary = ifelse(Percent_Positive >= 80, 1, 0))
+
+ggplot(data = merged_data_2, aes(x = Percent_Positive)) +
+  geom_histogram(binwidth = 1, fill = 'purple', color = 'black') +
+  xlab("% Positive Reviews") +
+  ggtitle("Curated Games") +
+  theme_classic()
+
+# Data has been merged and sculpted, and the criteria of a successful game has been defined as having a review summary of "Very Positive" where that equates to a positive review percentage of 80% or higher. 
+```
+
+**Section 3a: Logistic Regression Pre-processing**
+```{r}
+# Here I want to get an idea of what tags I should use to create my columns that would be used as inputs to the logistic regression.
+unique_tags <- merged_data_2 %>%
+  mutate(tags = str_extract_all(merged_data_2$Popular_Tags, "'(.*?)'")) %>%
+  unnest(tags) %>%
+  count(tags, name = "tag_count", sort = TRUE) %>%
+  distinct(tags, .keep_all = TRUE)
+
+  unique_tags_2 <- unique_tags %>%
+  filter(tag_count >= 40)
+
+ggplot(unique_tags_2, aes(x = reorder(tags, -tag_count), y = tag_count)) +
+  geom_bar(stat = "identity", fill = 'blue', color = 'black') +
+  labs(title = "Tag Counts Greater than 40 (Across 553 games)", x = "Tag Name", y = "Tag Count") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+# This chart is important because it gives us a good idea what tags might make for good predictors. Remember tags can only have a count as large as the sample of games since each game can only have one count of a particular tag. I'm predicting tags that are good predictors will be somewhere in the middle around a count of ~275, because we know if each game had one tag in common it automatically becomes useless in trying to delineate the games by that tag.
+```
+**Section 3b: Logistic Regression Pre-processing Continued...**
+```{r}
+# Making a fresh data frame for this step in the process
+columns_to_keep_4 <- c("Title", "average_play_time_min", "All_Reviews_Summary", "Popular_Tags", "Percent_Positive", "Original_Price", "Binary_All_Reviews_Summary")
+merged_data_3 <- subset(merged_data_2, select = columns_to_keep_4)
+
+# Creating a list of unique tags.
+tag_list <- unlist(unique_tags_2$tags) %>%
+  str_remove_all("\'")
+
+# Creating a column for each tag found in our list of tags and adding it to our data frame.
+for (i in 1:length(tag_list)) {
+  new_column <- str_detect(merged_data_3$Popular_Tags, tag_list[i])
+  
+  merged_data_3[[tag_list[i]]] <- new_column
+}
+
+# Removing an artifact.
+merged_data_3$`, ` <- NULL
+
+# Separating the data into a training set and a test set.
+set.seed(42)
+split_index <- createDataPartition(merged_data_3$Binary_All_Reviews_Summary, p = 0.8, list = FALSE)
+train_set <- merged_data_3[split_index, ]
+test_set <- merged_data_3[-split_index, ]
+
+# We finally have it! 
+# We have a data frame with success criteria and 69 columns with binary values representing the presence of a tag.
+# We have an 80/20 split for training and test data.
+```
+
+**Section 4: Model Creation**
+```{r}
+# In this code chunk an initial logistic regression model was created and non significant tags were eliminated if their p-value was above 0.10.
+logistic_model <- 
+  glm(train_set$Binary_All_Reviews_Summary ~ ., data = train_set[, 8:75], family = binomial)
+
+# Removing non-significant columns from the training data.
+train_set_2 <- subset(train_set, select = c(-`3D`, -Action, -`Action RPG`, -Anime, -Atmospheric, -Building, -Casual, -`Character Customization`, -Classic, -Colorful, -Comedy, -`Controller`, -Cute, -Dark, -`Dark Fantasy`, -`Early Access`, -`Family Friendly`, -Fantasy, -`Fast-Paced`, -`Female Protagonist`, -`First-Person`, -FPS, -`Free to Play`, -Gore, -Horror, -Indie, -`Local Co-Op`, -`Local Multiplayer`, -Management, -`Massively Multiplayer`, -`Pixel Graphics`, -`Online Co-Op`, -`Open World`, -Platformer, -`Psychological Horror`, -Puzzle, -`Replay Value`, -Retro, -Roguelite, -Roguelike, -Sandbox, -`Sci-fi`, -Shooter, -Simulation, -Singleplayer, -Space, -Stealth, -`Story Rich`, -Strategy, -Survival, -Tactical, -`Team-Based`, -`Third Person`, -`Third-Person Shooter`))
+
+# Removing non-significant columns the test data.
+test_set_2 <- subset(test_set, select = c(-`3D`, -Action, -`Action RPG`, -Anime, -Atmospheric, -Building, -Casual, -`Character Customization`, -Classic, -Colorful, -Comedy, -`Controller`, -Cute, -Dark, -`Dark Fantasy`, -`Early Access`, -`Family Friendly`, -Fantasy, -`Fast-Paced`, -`Female Protagonist`, -`First-Person`, -FPS, -`Free to Play`, -Gore, -Horror, -Indie, -`Local Co-Op`, -`Local Multiplayer`, -Management, -`Massively Multiplayer`, -`Pixel Graphics`, -`Online Co-Op`, -`Open World`, -Platformer, -`Psychological Horror`, -Puzzle, -`Replay Value`, -Retro, -Roguelite, -Roguelike, -Sandbox, -`Sci-fi`, -Shooter, -Simulation, -Singleplayer, -Space, -Stealth, -`Story Rich`, -Strategy, -Survival, -Tactical, -`Team-Based`, -`Third Person`, -`Third-Person Shooter`))
+
+# Use the finalized data to create the better model.
+logistic_model_2 <- 
+  glm(train_set_2$Binary_All_Reviews_Summary ~ ., data = train_set_2[, 8:ncol(train_set_2)], family = binomial)
+
+summary(logistic_model_2)
+```
+**Section 5: Model Predictions and Conclusions**
+```{r}
+# Adding the predicted probability of the games sentiment that is generated from the initial model.
+prediction_test_data <- test_set %>%
+  mutate(prediction = predict(logistic_model, type = "response", newdata = test_set)*100) %>%
+  select(Title, Original_Price, All_Reviews_Summary, Binary_All_Reviews_Summary, average_play_time_min, Percent_Positive, prediction)
+prediction_test_data$binary_prediction = ifelse(prediction_test_data$prediction >= 80, 1, 0)
+
+
+# Adding the predicted probability of the games sentiment that is generated from the updated model.
+prediction_test_data_2 <- test_set_2 %>%
+  mutate(prediction = predict(logistic_model_2, type = "response", newdata = test_set_2)*100) %>%
+  select(Title, Original_Price, All_Reviews_Summary, Binary_All_Reviews_Summary, average_play_time_min, Percent_Positive, prediction)
+prediction_test_data_2$binary_prediction = ifelse(prediction_test_data_2$prediction >= 80, 1, 0)
+
+# Assess model performance with all parameters found in the initial model.
+roc_curve <- roc(prediction_test_data$Binary_All_Reviews_Summary, predict(logistic_model, type = "response", newdata = test_set))
+plot(roc_curve, col = "blue", main = "ROC Curve, All Parameters", lwd = 2)
+auc_value <- auc(roc_curve)
+text(0.7, 0.2, paste("AUC =", round(auc_value, 3)), col = "red", cex = 1.2)
+
+# Assess model performance with significant parameters found in the updated model.
+roc_curve_2 <- roc(prediction_test_data_2$Binary_All_Reviews_Summary, predict(logistic_model_2, type = "response", newdata = test_set_2))
+plot(roc_curve_2, col = "blue", main = "ROC Curve 2, Significant Parameters", lwd = 2)
+auc_value_2 <- auc(roc_curve_2)
+text(0.7, 0.2, paste("AUC =", round(auc_value_2, 3)), col = "red", cex = 1.2)
+```
+
+**Conclusions:** Based on my AUC equal to 0.754 I can say my model is pretty good at determining which games will have 80% or more positive reviews. Below is the criteria used:
+
+0.5 to 0.6: Poor discrimination  
+0.6 to 0.7: Fair discrimination  
+0.7 to 0.8: Good discrimination  
+0.8 to 0.9: Very good discrimination  
+0.9 to 1.0: Excellent discrimination  
+
+Looking at the data table towards the bottom of the page we can say the following before making any decisions about recommending game:  
+There is a 68.2% chance that a game recommended will be good.  
+There is an 8.2% chance that a game not recommended will be bad.
+There is a 6.4% chance that a game recommended will be bad
+There is a 17.2% chance that a game not recommended will be good.  
+
+The chance you would like a game recommended by the model is 68.2/(68.2+6.4) which is ~91.4%. Although there is a chance of missing out on some good games, by using the model's recommendation to buy a game labeled as "Very Positive" or "Overwelmingly Positive", the likelihood of enjoying the game is approximately 91.4%, surpassing the effectiveness of using aggregate statistics to predict game likability (Steam Data has an overall average of 86.4%).
+```{r}
+prediction_test_data_2$True_Positive <- ifelse(prediction_test_data_2$Binary_All_Reviews_Summary == 1 & prediction_test_data_2$binary_prediction == 1, 1, 0)
+prediction_test_data_2$True_Negative <- ifelse(prediction_test_data_2$Binary_All_Reviews_Summary == 0 & prediction_test_data_2$binary_prediction == 0, 1, 0)
+prediction_test_data_2$False_Positive <- ifelse(prediction_test_data_2$Binary_All_Reviews_Summary == 0 & prediction_test_data_2$binary_prediction == 1, 1, 0)
+prediction_test_data_2$False_Negative <- ifelse(prediction_test_data_2$Binary_All_Reviews_Summary == 1 & prediction_test_data_2$binary_prediction == 0, 1, 0)
+
+cross_table_columns <- c("True_Positive", "True_Negative", "False_Positive", "False_Negative")
+cross_table_values <- c(sum(100 * prediction_test_data_2$True_Positive)/110, 100 * sum(prediction_test_data_2$True_Negative)/110, 100* sum(prediction_test_data_2$False_Positive)/110, 100 * sum(prediction_test_data_2$False_Negative/110))
+
+# Create a data frame from the vectors
+cross_table <- data.frame(Category = cross_table_columns, Percentage = cross_table_values)
+
+# Print the resulting table
+print(cross_table)
+
+# Aggregate Steam Data
+mean(game_data$Total_Reviews)
+mean(game_data$Positive_Reviews)
+mean(game_data$Positive_Reviews)/mean(game_data$Total_Reviews)*100
+```
+
+
