@@ -70,7 +70,7 @@ columns_to_keep <- c("appid", "name", "playtime_forever")
 # 5. Append the player data to the player_data data frame.
 # 6. Repeat until all player data has been extracted.
 for (i in 1:length(steamIDs)) {
-  temp <- as.data.frame(SteamR::games("247135F997365F298A0E52ADA7090847", steamIDs[i]))
+  temp <- as.data.frame(SteamR::games("", steamIDs[i]))
   temp <- subset(temp, select = columns_to_keep) %>%
     distinct() %>%
     mutate(player_id = steamIDs[i])
